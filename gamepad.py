@@ -23,14 +23,27 @@ button_mask = const(
 # i2c_bus = board.STEMMA_I2C()  # The built-in STEMMA QT connector on the microcontroller
 i2c_bus = board.I2C()  # Uses board.SCL and board.SDA. Use with breadboard.
 
-seesaw = Seesaw(i2c_bus, addr=0x50)
+count = 0
+for i in range(0, 100):
+    try:
+        seesaw = Seesaw(i2c_bus, addr=0x50)
+        print(f"Connected to seesaw after {i} tries.")
+        break
+    except:
+        count = count + 1
+        time.sleep(0.1)
+else:
+    print(f"Failed to connect to seesaw after {i} tries.")
+    exit(1)
 
 seesaw.pin_mode_bulk(button_mask, seesaw.INPUT_PULLUP)
 
 last_x = 0
 last_y = 0
 
-while True:
+last_start = False
+
+while not last_start:
     x = 1023 - seesaw.analog_read(14)
     y = 1023 - seesaw.analog_read(15)
 
@@ -42,7 +55,7 @@ while True:
     buttons = seesaw.digital_read_bulk(button_mask)
 
     if not buttons & (1 << BUTTON_X):
-        print("Button x pressed")
+        print("Button X pressed")
 
     if not buttons & (1 << BUTTON_Y):
         print("Button Y pressed")
@@ -58,5 +71,6 @@ while True:
 
     if not buttons & (1 << BUTTON_START):
         print("Button Start pressed")
+        last_start = True
 
-    time.sleep(0.01)
+    time.sleep(0.5)
