@@ -1,19 +1,24 @@
-from adafruit_crickit import crickit
+from adafruit_motor import stepper as sp
 from adafruit_motor.stepper import StepperMotor
 from adafruit_motor.servo import Servo
 from time import sleep
 
-_DEFAULT_RATE = .02
+_DEFAULT_RATE = 0.01
 
-def move_servo(servo, angle: int, delta:int = 1, rate: float = _DEFAULT_RATE):
+
+def move_servo(servo: Servo, angle: int, delta: int = 1, rate: float = _DEFAULT_RATE):
     """Move a servo to a certain angle by "stepping" by delta degrees with a pause of rate seconds between steps.
 
     Args:
         servo (Servo): the servo
         angle (float): where to move to
-        delta (float): how many degrees to step by (default 1.0)
-        rate (float): pause between steps in seconds or fractions thereof
+        delta (float): how many degrees to step by. Default is 1.
+        rate (float): pause between steps in seconds or fractions thereof. Default is .02 seconds (20 miliiseconds). If None or <= 0, no pausing.
     """
+    if rate is None or rate <= 0:
+        servo.angle = angle
+        return
+
     current = int(servo.angle)
     if angle > current:
         d = delta
@@ -26,57 +31,32 @@ def move_servo(servo, angle: int, delta:int = 1, rate: float = _DEFAULT_RATE):
 
     servo.angle = angle
 
-class RotatorServo:
-    def __init__(self, servo:Servo) -> None:
-        self._servo = servo
 
-    @property
-    def angle(self) -> float:
-        return self._servo.angle
+def move_stepper(
+    stepper: StepperMotor,
+    angle: float,
+    rate: float = _DEFAULT_RATE,
+    steps_per_rev: int = 200,
+    gear_ratio: float = 1.0,
+):
+    """Move a stepper to a certain angle by "stepping" by delta degrees with a pause of rate seconds between steps.
 
-    @angle.setter
-    def angle(self, angle: float) -> None:
-        move_servo(self._servo, int(angle))
+    NOTE: This does not use microstepping.
 
-class Rotators:
-    def __init__(self) -> None:
-        pass
+    Args:
+        stepper (StepperMotor): the stepper
+        angle (float): where to move to
+        rate (float): pause between steps in seconds or fractions thereof. Default is .02 seconds (20 miliiseconds). If None or <= 0, no pausing.
+        steps_per_rev (int): number of steps per revolution. Default is 200.
+        gear_ratio (float): gear ratio. Default is 1.0.
+    """
+    steps = steps_per_rev * gear_ratio * angle / 360
+    if steps < 0:
+        direction = sp.BACKWARD
+    else:
+        direction = sp.FORWARD
+    steps = abs(steps)
 
-    @staticmethod
-    def servo(port: int) -> RotatorServo:
-
-        if port == 1:
-            s = crickit.servo_1
-        elif port == 2:
-            s = crickit.servo_2
-        elif port == 3:
-            s = crickit.servo_3
-        elif port == 4:
-            s = crickit.servo_4
-        else:
-            raise ValueError("Invalid servo port")
-        return RotatorServo(s)
-
-    @staticmethod
-    def xxg90(port: int, start_angle = 0) -> RotatorServo:
-        """Create a RotatorServo for an SG90 or MG90 servo on the specified port.
-
-        This sets the putlse width range to 500-2400, which is the range for the SG90 and MG90 servos.
-
-        param port: the port number (1-4)
-        """
-        if port == 1:
-            s = crickit.servo_1
-        elif port == 2:
-            s = crickit.servo_2
-        elif port == 3:
-            s = crickit.servo_3
-        elif port == 4:
-            s = crickit.servo_4
-        else:
-            raise ValueError("Invalid servo port")
-        if s.angle == None:
-            s.set_pulse_width_range(min_pulse=500, max_pulse=2400)
-            s.angle = start_angle
-
-        return RotatorServo(s)
+    for i in range(int(steps)):
+        stepper.onestep(direction=direction)
+        sleep(rate)
