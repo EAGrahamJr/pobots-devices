@@ -47,7 +47,7 @@ while not last_start:
     x = 1023 - seesaw.analog_read(14)
     y = 1023 - seesaw.analog_read(15)
 
-    if (abs(x - last_x) > 3) or (abs(y - last_y) > 3):
+    if (abs(x - last_x) > 5) or (abs(y - last_y) > 5):
         print(x, y)
         last_x = x
         last_y = y
@@ -73,4 +73,4 @@ while not last_start:
         print("Button Start pressed")
         last_start = True
 
-    time.sleep(0.5)
+    time.sleep(0.1)
